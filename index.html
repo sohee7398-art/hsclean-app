@@ -36,10 +36,10 @@ input[type=text],input[type=number],input[type=email],select{
   color:var(--text);-webkit-appearance:none;appearance:none;outline:none;transition:border-color .15s}
 input:focus,select:focus{border-color:var(--accent)}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-.col-heads{display:grid;grid-template-columns:minmax(0,1fr) 68px 80px 32px;gap:6px;margin-bottom:6px;padding:0 2px}
+.col-heads{display:grid;grid-template-columns:minmax(0,1fr) 80px 32px;gap:6px;margin-bottom:6px;padding:0 2px}
 .col-head{font-size:11px;color:var(--text3);font-weight:500}
 .col-head.r{text-align:right}
-.item-row{display:grid;grid-template-columns:minmax(0,1fr) 68px 80px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.item-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 32px;gap:6px;align-items:center;margin-bottom:6px}
 .item-row input{padding:9px 10px;font-size:14px}
 .item-row input[type=number]{text-align:right}
 .item-row input.qty-input{border-width:1px;border-color:var(--accent);background:var(--success-bg)}
@@ -126,7 +126,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="col-heads">
         <div class="col-head">품목명</div>
         <div class="col-head r">수량</div>
-        <div class="col-head r">단가</div>
         <div class="col-head"></div>
       </div>
       <div id="item-list"></div>
@@ -135,7 +134,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <div class="total-box" id="total-box" style="display:none">
-      <span class="total-label">합계금액</span>
+      <span class="total-label">총 수량</span>
       <span class="total-num" id="total-display">₩0</span>
     </div>
 
@@ -289,7 +288,7 @@ function onClientChange(){
     :`<span class="badge badge-print">🖨 종이 출력</span>`;
 
   // 기본 품목 자동 채우기
-  items=(c.presets||[]).map(p=>({id:Date.now()+Math.random(),name:p.name,qty:'',price:p.price}));
+  items=(c.presets||[]).map(p=>({id:Date.now()+Math.random(),name:p.name,qty:''}));
   hint.textContent=items.length?'수량만 입력하면 돼요. 오늘 추가 품목은 아래 + 버튼으로 추가하세요.':'';
   renderItems();
   itemsCard.style.display='';
@@ -297,8 +296,8 @@ function onClientChange(){
   saveBtn.style.display='';
 }
 
-function addItem(name='',qty='',price=''){
-  items.push({id:Date.now()+Math.random(),name,qty,price});
+function addItem(name='',qty=''){
+  items.push({id:Date.now()+Math.random(),name,qty});
   renderItems();
 }
 
@@ -316,7 +315,6 @@ function renderItems(){
     row.innerHTML=`
       <input type="text" placeholder="품목명" value="${item.name}" oninput="updateItem(${item.id},'name',this.value)">
       <input type="number" class="qty-input" placeholder="수량" value="${item.qty}" min="0" oninput="updateItem(${item.id},'qty',this.value)">
-      <input type="number" placeholder="단가" value="${item.price}" min="0" oninput="updateItem(${item.id},'price',this.value)">
       <button class="del-btn" onclick="removeItem(${item.id})" aria-label="삭제">✕</button>`;
     list.appendChild(row);
   });
@@ -330,8 +328,8 @@ function updateItem(id,field,val){
 }
 
 function updateTotal(){
-  const total=items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
-  document.getElementById('total-display').textContent='₩'+Math.round(total).toLocaleString();
+  const totalQty=items.reduce((s,i)=>s+(parseFloat(i.qty)||0),0);
+  document.getElementById('total-display').textContent=Math.round(totalQty).toLocaleString()+'개';
 }
 
 function showToast(msg,type='ok'){
@@ -353,7 +351,7 @@ async function saveEntry(){
 
   const c=clients.find(x=>x.name===clientVal);
   const payload={date,client:clientVal,clientEmail:c&&c.type==='email'?c.email:null,
-    items:filledItems.map(i=>({name:i.name,qty:i.qty,price:i.price}))};
+    items:filledItems.map(i=>({name:i.name,qty:i.qty}))};
 
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',
