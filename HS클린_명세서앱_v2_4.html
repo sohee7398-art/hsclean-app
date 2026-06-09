@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HS클린 명세서</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f7f7f5;--bg3:#f0f0ed;
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --border:#e0e0dc;--border2:#ccc;
+  --accent:#1a1a1a;--accent-text:#fff;
+  --err-bg:#fff0f0;--err:#c0392b;
+  --info-bg:#f0f5ff;--info:#2355b0;
+  --warn-bg:#fff8ec;--warn:#a05c00;
+  --success-bg:#f0faf4;--success:#1a7a4a;
+  --radius:10px;--radius-sm:7px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:var(--bg2);color:var(--text);min-height:100vh}
+.app{max-width:420px;margin:0 auto;padding:16px;padding-bottom:48px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.header-title{font-size:18px;font-weight:700}
+.header-sub{font-size:12px;color:var(--text3);margin-top:1px}
+.tab-bar{display:flex;gap:6px;margin-bottom:18px;background:var(--bg3);padding:4px;border-radius:var(--radius)}
+.tab{flex:1;padding:9px;border:none;border-radius:7px;background:none;color:var(--text2);font-size:13px;cursor:pointer;font-weight:500;transition:all .15s}
+.tab.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+input[type=text],input[type=number],input[type=email],select{
+  width:100%;padding:10px 12px;border:0.5px solid var(--border2);
+  border-radius:var(--radius-sm);font-size:15px;background:var(--bg);
+  color:var(--text);-webkit-appearance:none;appearance:none;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--accent)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.col-heads{display:grid;grid-template-columns:minmax(0,1fr) 68px 80px 32px;gap:6px;margin-bottom:6px;padding:0 2px}
+.col-head{font-size:11px;color:var(--text3);font-weight:500}
+.col-head.r{text-align:right}
+.item-row{display:grid;grid-template-columns:minmax(0,1fr) 68px 80px 32px;gap:6px;align-items:center;margin-bottom:6px}
+.item-row input{padding:9px 10px;font-size:14px}
+.item-row input[type=number]{text-align:right}
+.item-row input.qty-input{border-width:1px;border-color:var(--accent);background:var(--success-bg)}
+.del-btn{width:32px;height:38px;background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.del-btn:hover{background:var(--err-bg);border-color:var(--err);color:var(--err)}
+.add-item-btn{width:100%;padding:10px;border:0.5px dashed var(--border2);border-radius:var(--radius-sm);background:none;color:var(--text2);font-size:14px;cursor:pointer;margin-top:4px;transition:all .15s}
+.add-item-btn:hover{background:var(--bg2)}
+.total-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:13px;color:var(--text2);font-weight:500}
+.total-num{font-size:26px;font-weight:700;color:var(--text)}
+.btn-primary{width:100%;padding:14px;background:var(--accent);color:var(--accent-text);border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500;margin-top:8px}
+.badge-email{background:var(--info-bg);color:var(--info)}
+.badge-print{background:var(--warn-bg);color:var(--warn)}
+.hint{font-size:12px;color:var(--text3);margin-top:6px}
+
+/* 거래처 목록 */
+.client-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--border)}
+.client-row:last-child{border-bottom:none}
+.client-name{font-size:15px;font-weight:500}
+.client-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.client-actions{display:flex;gap:6px}
+.icon-btn{background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text2);cursor:pointer;padding:5px 10px;font-size:12px;font-weight:500;white-space:nowrap}
+.icon-btn.danger{color:var(--err);border-color:var(--err)}
+
+/* 기본 품목 편집 */
+.preset-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 28px;gap:6px;align-items:center;margin-bottom:6px}
+.preset-row input{padding:8px 10px;font-size:14px}
+.preset-row input[type=number]{text-align:right}
+
+/* 추가 폼 */
+.type-toggle{display:flex;gap:6px;margin-top:6px}
+.type-btn{flex:1;padding:9px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);font-size:14px;cursor:pointer;font-weight:500;transition:all .15s}
+.type-btn.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.btn-outline{width:100%;padding:12px;background:var(--bg);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+.section-divider{height:0.5px;background:var(--border);margin:14px 0}
+.empty-state{text-align:center;padding:20px 0;color:var(--text3);font-size:14px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--bg);border-radius:var(--radius) var(--radius) 0 0;padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions button{flex:1;padding:12px;border-radius:var(--radius-sm);font-size:15px;font-weight:500;cursor:pointer;border:none}
+.btn-cancel{background:var(--bg3);color:var(--text2)}
+.btn-confirm{background:var(--accent);color:var(--accent-text)}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);padding:11px 22px;border-radius:var(--radius);font-size:14px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:320px;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:#1a1a1a;color:#fff}
+.toast.err{background:var(--err-bg);color:var(--err);border:0.5px solid var(--err)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-title">HS클린</div>
+      <div class="header-sub">거래 명세서</div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('entry')">오늘 입력</button>
+    <button class="tab" onclick="showTab('clients')">거래처 관리</button>
+  </div>
+
+  <!-- 입력 탭 -->
+  <div id="tab-entry">
+    <div class="card">
+      <div class="field">
+        <label>날짜</label>
+        <input type="text" id="date-input">
+      </div>
+      <div class="field">
+        <label>거래처</label>
+        <select id="client-select" onchange="onClientChange()">
+          <option value="">거래처 선택</option>
+        </select>
+        <div id="client-badge"></div>
+      </div>
+    </div>
+
+    <div class="card" id="items-card" style="display:none">
+      <div class="card-title">품목 · 수량 입력</div>
+      <div class="col-heads">
+        <div class="col-head">품목명</div>
+        <div class="col-head r">수량</div>
+        <div class="col-head r">단가</div>
+        <div class="col-head"></div>
+      </div>
+      <div id="item-list"></div>
+      <button class="add-item-btn" onclick="addItem()">+ 품목 추가</button>
+      <p class="hint" id="items-hint"></p>
+    </div>
+
+    <div class="total-box" id="total-box" style="display:none">
+      <span class="total-label">합계금액</span>
+      <span class="total-num" id="total-display">₩0</span>
+    </div>
+
+    <button class="btn-primary" id="save-btn" onclick="saveEntry()" style="display:none">저장하기</button>
+  </div>
+
+  <!-- 거래처 관리 탭 -->
+  <div id="tab-clients" style="display:none">
+    <div class="card">
+      <div class="card-title">등록된 거래처</div>
+      <div id="client-list"><div class="empty-state">거래처가 없어요</div></div>
+    </div>
+    <button class="btn-outline" onclick="showAddModal()">+ 거래처 추가</button>
+  </div>
+</div>
+
+<!-- 거래처 추가 모달 -->
+<div class="modal-bg" id="add-modal" style="display:none" onclick="closeAddModal(event)">
+  <div class="modal">
+    <div class="modal-title">거래처 추가</div>
+    <div class="field">
+      <label>거래처명</label>
+      <input type="text" id="new-name" placeholder="예: 마키노 강남">
+    </div>
+    <div class="field">
+      <label>전달 방식</label>
+      <div class="type-toggle">
+        <button class="type-btn active" id="type-print" onclick="setType('print')">🖨 종이 출력</button>
+        <button class="type-btn" id="type-email" onclick="setType('email')">✉ 이메일</button>
+      </div>
+    </div>
+    <div class="field" id="email-field" style="display:none">
+      <label>이메일 주소</label>
+      <input type="email" id="new-email" placeholder="example@gmail.com">
+    </div>
+    <div class="section-divider"></div>
+    <div class="field">
+      <label>기본 품목 · 단가 <span style="color:var(--text3);font-weight:400">(수량은 매일 입력)</span></label>
+      <div id="preset-list"></div>
+      <button class="add-item-btn" onclick="addPreset()" style="margin-top:6px">+ 품목 추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">취소</button>
+      <button class="btn-confirm" onclick="confirmAddClient()">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기본 품목 편집 모달 -->
+<div class="modal-bg" id="edit-modal" style="display:none" onclick="closeEditModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="edit-modal-title">품목 편집</div>
+    <div class="field">
+      <label>기본 품목 · 단가</label>
+      <div id="edit-preset-list"></div>
+      <button class="add-item-btn" onclick="addEditPreset()" style="margin-top:6px">+ 품목 추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">취소</button>
+      <button class="btn-confirm" onclick="confirmEditPresets()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEIB-B5FZaKwgUL7AA5rMO-7IdncrhiaRjuqJBvRPDQVsG5e6PNgZ-oMIUcaH0Opf0Yw/exec';
+let items = [];
+let newClientType = 'print';
+let newPresets = [];
+let editIdx = -1;
+let editPresets = [];
+
+function loadClients() {
+  const saved = localStorage.getItem('hs_clients');
+  if(saved) return JSON.parse(saved);
+  const defaults = [
+    { name:'마키노 잠실', type:'print', email:null, presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300},{name:'셔츠', price:1500}
+    ]},
+    { name:'마키노 판교', type:'email', email:'hsclean90@gmail.com', presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300},{name:'셔츠', price:1500},{name:'정장자켓', price:4000}
+    ]},
+    { name:'마오', type:'print', email:null, presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300}
+    ]},
+    { name:'도르도뉴', type:'print', email:null, presets:[
+      {name:'상의', price:2500},{name:'셔츠', price:2000},{name:'하의', price:2000},{name:'냅킨', price:3500},{name:'앞치마', price:800},{name:'행주', price:200}
+    ]},
+    { name:'샘클레어', type:'print', email:null, presets:[
+      {name:'크로스', price:2200},{name:'냅킨', price:400},{name:'행주', price:250}
+    ]},
+    { name:'골드(압구정)', type:'print', email:null, presets:[
+      {name:'티셔츠', price:1500},{name:'앞치마', price:800}
+    ]}
+  ];
+  localStorage.setItem('hs_clients', JSON.stringify(defaults));
+  return defaults;
+}
+function saveClients(c){ localStorage.setItem('hs_clients', JSON.stringify(c)); }
+
+function today(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function showTab(t){
+  document.getElementById('tab-entry').style.display=t==='entry'?'':'none';
+  document.getElementById('tab-clients').style.display=t==='clients'?'':'none';
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',(i===0&&t==='entry')||(i===1&&t==='clients'));
+  });
+  if(t==='clients') renderClientList();
+  if(t==='entry') renderClientSelect();
+}
+
+function renderClientSelect(){
+  const clients=loadClients();
+  const sel=document.getElementById('client-select');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">거래처 선택</option>';
+  clients.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.name; o.textContent=c.name;
+    sel.appendChild(o);
+  });
+  if(cur) sel.value=cur;
+}
+
+function onClientChange(){
+  const clients=loadClients();
+  const val=document.getElementById('client-select').value;
+  const badge=document.getElementById('client-badge');
+  const itemsCard=document.getElementById('items-card');
+  const totalBox=document.getElementById('total-box');
+  const saveBtn=document.getElementById('save-btn');
+  const hint=document.getElementById('items-hint');
+
+  if(!val){
+    badge.innerHTML='';
+    itemsCard.style.display='none';
+    totalBox.style.display='none';
+    saveBtn.style.display='none';
+    return;
+  }
+  const c=clients.find(x=>x.name===val);
+  if(!c) return;
+
+  badge.innerHTML=c.type==='email'
+    ?`<span class="badge badge-email">✉ 이메일 자동발송 · ${c.email}</span>`
+    :`<span class="badge badge-print">🖨 종이 출력</span>`;
+
+  // 기본 품목 자동 채우기
+  items=(c.presets||[]).map(p=>({id:Date.now()+Math.random(),name:p.name,qty:'',price:p.price}));
+  hint.textContent=items.length?'수량만 입력하면 돼요. 오늘 추가 품목은 아래 + 버튼으로 추가하세요.':'';
+  renderItems();
+  itemsCard.style.display='';
+  totalBox.style.display='';
+  saveBtn.style.display='';
+}
+
+function addItem(name='',qty='',price=''){
+  items.push({id:Date.now()+Math.random(),name,qty,price});
+  renderItems();
+}
+
+function removeItem(id){
+  items=items.filter(i=>i.id!==id);
+  renderItems();
+}
+
+function renderItems(){
+  const list=document.getElementById('item-list');
+  list.innerHTML='';
+  items.forEach(item=>{
+    const row=document.createElement('div');
+    row.className='item-row';
+    row.innerHTML=`
+      <input type="text" placeholder="품목명" value="${item.name}" oninput="updateItem(${item.id},'name',this.value)">
+      <input type="number" class="qty-input" placeholder="수량" value="${item.qty}" min="0" oninput="updateItem(${item.id},'qty',this.value)">
+      <input type="number" placeholder="단가" value="${item.price}" min="0" oninput="updateItem(${item.id},'price',this.value)">
+      <button class="del-btn" onclick="removeItem(${item.id})" aria-label="삭제">✕</button>`;
+    list.appendChild(row);
+  });
+  updateTotal();
+}
+
+function updateItem(id,field,val){
+  const item=items.find(i=>i.id===id);
+  if(item) item[field]=val;
+  updateTotal();
+}
+
+function updateTotal(){
+  const total=items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
+  document.getElementById('total-display').textContent='₩'+Math.round(total).toLocaleString();
+}
+
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>{t.className='toast';},3000);
+}
+
+async function saveEntry(){
+  const clients=loadClients();
+  const date=document.getElementById('date-input').value.trim();
+  const clientVal=document.getElementById('client-select').value;
+  if(!clientVal){showToast('거래처를 선택해주세요','err');return;}
+  const filledItems=items.filter(i=>i.name&&i.qty&&i.price);
+  if(!filledItems.length){showToast('수량을 입력해주세요','err');return;}
+
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true; btn.textContent='저장 중...';
+
+  const c=clients.find(x=>x.name===clientVal);
+  const payload={date,client:clientVal,clientEmail:c&&c.type==='email'?c.email:null,
+    items:filledItems.map(i=>({name:i.name,qty:i.qty,price:i.price}))};
+
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(c&&c.type==='print'){
+      showToast('저장 완료 · PDF 출력 준비 중...','ok');
+      setTimeout(()=>printPDF(payload),600);
+    } else {
+      showToast('저장 완료 · 이메일 발송됨 ✓','ok');
+    }
+    items=[];
+    document.getElementById('client-select').value='';
+    document.getElementById('client-badge').innerHTML='';
+    document.getElementById('items-card').style.display='none';
+    document.getElementById('total-box').style.display='none';
+    document.getElementById('save-btn').style.display='none';
+    document.getElementById('date-input').value=today();
+  }catch(err){showToast('저장 실패 · 인터넷 연결을 확인해주세요','err');}
+  btn.disabled=false; btn.textContent='저장하기';
+}
+
+function printPDF(data){
+  const total=data.items.reduce((s,i)=>s+(parseFloat(i.qty)||0)*(parseFloat(i.price)||0),0);
+  const rows=data.items.map(i=>`<tr><td>${i.name}</td><td style="text-align:right">${Number(i.qty).toLocaleString()}</td><td style="text-align:right">₩${Number(i.price).toLocaleString()}</td><td style="text-align:right">₩${(Number(i.qty)*Number(i.price)).toLocaleString()}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>거래명세서</title>
+  <style>body{font-family:-apple-system,sans-serif;padding:40px;max-width:520px;margin:0 auto;color:#1a1a1a}h1{font-size:22px;font-weight:700;margin-bottom:4px}.sub{font-size:13px;color:#888;margin-bottom:28px}table{width:100%;border-collapse:collapse;font-size:14px}th{background:#f5f5f3;padding:9px 12px;text-align:left;border-bottom:1.5px solid #ddd;font-weight:600}td{padding:9px 12px;border-bottom:0.5px solid #eee}.total td{font-weight:700;border-top:1.5px solid #1a1a1a;border-bottom:none}.footer{margin-top:32px;font-size:12px;color:#aaa}@media print{body{padding:20px}}</style>
+  </head><body><h1>거래 명세서</h1><div class="sub">${data.date} · ${data.client}</div>
+  <table><thead><tr><th>품목</th><th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">공급가액</th></tr></thead>
+  <tbody>${rows}</tbody><tfoot><tr class="total"><td colspan="3">합계</td><td style="text-align:right">₩${Math.round(total).toLocaleString()}</td></tr></tfoot></table>
+  <div class="footer">HS클린 · 경기도 광주시 대쌍령리 362-5, A동</div></body></html>`;
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
+  else{showToast('팝업 차단을 해제하고 다시 시도해주세요','err');}
+}
+
+/* 거래처 목록 */
+function renderClientList(){
+  const clients=loadClients();
+  const el=document.getElementById('client-list');
+  if(!clients.length){el.innerHTML='<div class="empty-state">등록된 거래처가 없어요</div>';return;}
+  el.innerHTML=clients.map((c,i)=>`
+    <div class="client-row">
+      <div>
+        <div class="client-name">${c.name}</div>
+        <div class="client-sub">${c.type==='email'?'✉ '+c.email:'🖨 종이 출력'} · 기본품목 ${(c.presets||[]).length}개</div>
+      </div>
+      <div class="client-actions">
+        <button class="icon-btn" onclick="showEditModal(${i})">품목 편집</button>
+        <button class="icon-btn danger" onclick="deleteClient(${i})">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+function deleteClient(idx){
+  const clients=loadClients();
+  if(!confirm(`"${clients[idx].name}"을 삭제할까요?`)) return;
+  clients.splice(idx,1);
+  saveClients(clients);
+  renderClientList();
+  renderClientSelect();
+}
+
+/* 거래처 추가 모달 */
+function showAddModal(){
+  newPresets=[];
+  newClientType='print';
+  document.getElementById('new-name').value='';
+  document.getElementById('new-email').value='';
+  document.getElementById('email-field').style.display='none';
+  document.getElementById('type-print').classList.add('active');
+  document.getElementById('type-email').classList.remove('active');
+  renderNewPresets();
+  document.getElementById('add-modal').style.display='flex';
+}
+function closeAddModal(e){
+  if(!e||e.target===document.getElementById('add-modal'))
+    document.getElementById('add-modal').style.display='none';
+}
+function setType(type){
+  newClientType=type;
+  document.getElementById('type-print').classList.toggle('active',type==='print');
+  document.getElementById('type-email').classList.toggle('active',type==='email');
+  document.getElementById('email-field').style.display=type==='email'?'':'none';
+}
+function addPreset(){
+  newPresets.push({name:'',price:''});
+  renderNewPresets();
+}
+function renderNewPresets(){
+  const el=document.getElementById('preset-list');
+  el.innerHTML=newPresets.map((p,i)=>`
+    <div class="preset-row">
+      <input type="text" placeholder="품목명" value="${p.name}" oninput="newPresets[${i}].name=this.value">
+      <input type="number" placeholder="단가" value="${p.price}" min="0" oninput="newPresets[${i}].price=this.value" style="text-align:right">
+      <button class="del-btn" onclick="newPresets.splice(${i},1);renderNewPresets()" aria-label="삭제">✕</button>
+    </div>`).join('');
+}
+function confirmAddClient(){
+  const name=document.getElementById('new-name').value.trim();
+  const email=document.getElementById('new-email').value.trim();
+  if(!name){showToast('거래처명을 입력해주세요','err');return;}
+  if(newClientType==='email'&&!email){showToast('이메일 주소를 입력해주세요','err');return;}
+  const clients=loadClients();
+  if(clients.find(c=>c.name===name)){showToast('이미 등록된 거래처예요','err');return;}
+  const presets=newPresets.filter(p=>p.name&&p.price).map(p=>({name:p.name,price:Number(p.price)}));
+  clients.push({name,type:newClientType,email:newClientType==='email'?email:null,presets});
+  saveClients(clients);
+  document.getElementById('add-modal').style.display='none';
+  renderClientList();
+  renderClientSelect();
+  showToast(`"${name}" 추가됐어요 ✓`,'ok');
+}
+
+/* 기본 품목 편집 모달 */
+function showEditModal(idx){
+  editIdx=idx;
+  const clients=loadClients();
+  const c=clients[idx];
+  editPresets=JSON.parse(JSON.stringify(c.presets||[]));
+  document.getElementById('edit-modal-title').textContent=`${c.name} · 기본 품목 편집`;
+  renderEditPresets();
+  document.getElementById('edit-modal').style.display='flex';
+}
+function closeEditModal(e){
+  if(!e||e.target===document.getElementById('edit-modal'))
+    document.getElementById('edit-modal').style.display='none';
+}
+function addEditPreset(){
+  editPresets.push({name:'',price:''});
+  renderEditPresets();
+}
+function renderEditPresets(){
+  const el=document.getElementById('edit-preset-list');
+  el.innerHTML=editPresets.map((p,i)=>`
+    <div class="preset-row">
+      <input type="text" placeholder="품목명" value="${p.name}" oninput="editPresets[${i}].name=this.value">
+      <input type="number" placeholder="단가" value="${p.price}" min="0" oninput="editPresets[${i}].price=this.value" style="text-align:right">
+      <button class="del-btn" onclick="editPresets.splice(${i},1);renderEditPresets()" aria-label="삭제">✕</button>
+    </div>`).join('');
+}
+function confirmEditPresets(){
+  const clients=loadClients();
+  clients[editIdx].presets=editPresets.filter(p=>p.name&&p.price).map(p=>({name:p.name,price:Number(p.price)}));
+  saveClients(clients);
+  document.getElementById('edit-modal').style.display='none';
+  renderClientList();
+  showToast('저장됐어요 ✓','ok');
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('date-input').value = today();
+  renderClientSelect();
+});
+</script>
+</body>
+</html>
