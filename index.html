@@ -164,6 +164,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="type-toggle">
         <button class="type-btn active" id="type-print" onclick="setType('print')">🖨 종이 출력</button>
         <button class="type-btn" id="type-email" onclick="setType('email')">✉ 이메일</button>
+        <button class="type-btn" id="type-none" onclick="setType('none')">— 없음</button>
       </div>
     </div>
     <div class="field" id="email-field" style="display:none">
@@ -186,9 +187,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- 기본 품목 편집 모달 -->
 <div class="modal-bg" id="edit-modal" style="display:none" onclick="closeEditModal(event)">
   <div class="modal">
-    <div class="modal-title" id="edit-modal-title">품목 편집</div>
+    <div class="modal-title" id="edit-modal-title">거래처 편집</div>
     <div class="field">
-      <label>기본 품목 · 단가</label>
+      <label>전달 방식</label>
+      <div class="type-toggle">
+        <button class="type-btn" id="edit-type-print" onclick="setEditType('print')">🖨 종이 출력</button>
+        <button class="type-btn" id="edit-type-email" onclick="setEditType('email')">✉ 이메일</button>
+        <button class="type-btn" id="edit-type-none" onclick="setEditType('none')">— 없음</button>
+      </div>
+    </div>
+    <div class="field" id="edit-email-field" style="display:none">
+      <label>이메일 주소</label>
+      <input type="email" id="edit-client-email" placeholder="example@gmail.com">
+    </div>
+    <div class="field">
+      <label>기본 품목</label>
       <div id="edit-preset-list"></div>
       <button class="add-item-btn" onclick="addEditPreset()" style="margin-top:6px">+ 품목 추가</button>
     </div>
@@ -343,7 +356,7 @@ async function saveEntry(){
   const date=document.getElementById('date-input').value.trim();
   const clientVal=document.getElementById('client-select').value;
   if(!clientVal){showToast('거래처를 선택해주세요','err');return;}
-  const filledItems=items.filter(i=>i.name&&i.qty&&i.price);
+  const filledItems=items.filter(i=>i.name&&i.qty);
   if(!filledItems.length){showToast('수량을 입력해주세요','err');return;}
 
   const btn=document.getElementById('save-btn');
@@ -396,7 +409,7 @@ function renderClientList(){
     <div class="client-row">
       <div>
         <div class="client-name">${c.name}</div>
-        <div class="client-sub">${c.type==='email'?'✉ '+c.email:'🖨 종이 출력'} · 기본품목 ${(c.presets||[]).length}개</div>
+        <div class="client-sub">${c.type==='email'?'✉ '+c.email:c.type==='none'?'— 없음':'🖨 종이 출력'} · 기본품목 ${(c.presets||[]).length}개</div>
       </div>
       <div class="client-actions">
         <button class="icon-btn" onclick="showEditModal(${i})">품목 편집</button>
@@ -434,6 +447,7 @@ function setType(type){
   newClientType=type;
   document.getElementById('type-print').classList.toggle('active',type==='print');
   document.getElementById('type-email').classList.toggle('active',type==='email');
+  document.getElementById('type-none').classList.toggle('active',type==='none');
   document.getElementById('email-field').style.display=type==='email'?'':'none';
 }
 function addPreset(){
@@ -443,9 +457,8 @@ function addPreset(){
 function renderNewPresets(){
   const el=document.getElementById('preset-list');
   el.innerHTML=newPresets.map((p,i)=>`
-    <div class="preset-row">
-      <input type="text" placeholder="품목명" value="${p.name}" oninput="newPresets[${i}].name=this.value">
-      <input type="number" placeholder="단가" value="${p.price}" min="0" oninput="newPresets[${i}].price=this.value" style="text-align:right">
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="text" placeholder="품목명" value="${p.name}" oninput="newPresets[${i}].name=this.value" style="padding:8px 10px;font-size:14px">
       <button class="del-btn" onclick="newPresets.splice(${i},1);renderNewPresets()" aria-label="삭제">✕</button>
     </div>`).join('');
 }
@@ -456,7 +469,7 @@ function confirmAddClient(){
   if(newClientType==='email'&&!email){showToast('이메일 주소를 입력해주세요','err');return;}
   const clients=loadClients();
   if(clients.find(c=>c.name===name)){showToast('이미 등록된 거래처예요','err');return;}
-  const presets=newPresets.filter(p=>p.name&&p.price).map(p=>({name:p.name,price:Number(p.price)}));
+  const presets=newPresets.filter(p=>p.name).map(p=>({name:p.name}));
   clients.push({name,type:newClientType,email:newClientType==='email'?email:null,presets});
   saveClients(clients);
   document.getElementById('add-modal').style.display='none';
@@ -471,7 +484,9 @@ function showEditModal(idx){
   const clients=loadClients();
   const c=clients[idx];
   editPresets=JSON.parse(JSON.stringify(c.presets||[]));
-  document.getElementById('edit-modal-title').textContent=`${c.name} · 기본 품목 편집`;
+  document.getElementById('edit-modal-title').textContent=`${c.name} 편집`;
+  setEditType(c.type||'print');
+  document.getElementById('edit-client-email').value=c.email||'';
   renderEditPresets();
   document.getElementById('edit-modal').style.display='flex';
 }
@@ -486,18 +501,29 @@ function addEditPreset(){
 function renderEditPresets(){
   const el=document.getElementById('edit-preset-list');
   el.innerHTML=editPresets.map((p,i)=>`
-    <div class="preset-row">
-      <input type="text" placeholder="품목명" value="${p.name}" oninput="editPresets[${i}].name=this.value">
-      <input type="number" placeholder="단가" value="${p.price}" min="0" oninput="editPresets[${i}].price=this.value" style="text-align:right">
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="text" placeholder="품목명" value="${p.name}" oninput="editPresets[${i}].name=this.value" style="padding:8px 10px;font-size:14px">
       <button class="del-btn" onclick="editPresets.splice(${i},1);renderEditPresets()" aria-label="삭제">✕</button>
     </div>`).join('');
 }
+function setEditType(type){
+  ['print','email','none'].forEach(t=>{
+    document.getElementById('edit-type-'+t).classList.toggle('active',t===type);
+  });
+  document.getElementById('edit-email-field').style.display=type==='email'?'':'none';
+  editIdx>=0 && (window._editType=type);
+}
 function confirmEditPresets(){
   const clients=loadClients();
-  clients[editIdx].presets=editPresets.filter(p=>p.name&&p.price).map(p=>({name:p.name,price:Number(p.price)}));
+  const type=window._editType||clients[editIdx].type;
+  const email=document.getElementById('edit-client-email').value.trim();
+  clients[editIdx].type=type;
+  clients[editIdx].email=type==='email'?email:null;
+  clients[editIdx].presets=editPresets.filter(p=>p.name).map(p=>({name:p.name,price:Number(p.price)||0}));
   saveClients(clients);
   document.getElementById('edit-modal').style.display='none';
   renderClientList();
+  renderClientSelect();
   showToast('저장됐어요 ✓','ok');
 }
 
