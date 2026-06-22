@@ -110,7 +110,7 @@ select{font-size:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     <div class="card">
       <div class="field">
         <label>날짜</label>
-        <input type="date" id="date-input" style="font-size:20px;padding:12px;height:auto">
+        <input type="date" id="date-input">
       </div>
       <div class="field">
         <label>거래처</label>
@@ -147,7 +147,6 @@ select{font-size:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
       <div class="card-title">등록된 거래처</div>
       <div id="client-list"><div class="empty-state">거래처가 없어요</div></div>
     </div>
-    <button class="btn-outline" onclick="fetchClientsFromSheet()" style="margin-bottom:8px">↻ 구글 시트에서 새로고침</button>
     <button class="btn-outline" onclick="showAddModal()">+ 거래처 추가</button>
   </div>
 </div>
@@ -226,28 +225,30 @@ let editPresets = [];
 function loadClients() {
   const saved = localStorage.getItem('hs_clients');
   if(saved) return JSON.parse(saved);
-  return [];
+  const defaults = [
+    { name:'마키노 잠실', type:'print', email:null, presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300},{name:'셔츠', price:1500}
+    ]},
+    { name:'마키노 판교', type:'email', email:'hsclean90@gmail.com', presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300},{name:'셔츠', price:1500},{name:'정장자켓', price:4000}
+    ]},
+    { name:'마오', type:'print', email:null, presets:[
+      {name:'상의', price:1500},{name:'하의', price:1300}
+    ]},
+    { name:'도르도뉴', type:'print', email:null, presets:[
+      {name:'상의', price:2500},{name:'셔츠', price:2000},{name:'하의', price:2000},{name:'냅킨', price:3500},{name:'앞치마', price:800},{name:'행주', price:200}
+    ]},
+    { name:'샘클레어', type:'print', email:null, presets:[
+      {name:'크로스', price:2200},{name:'냅킨', price:400},{name:'행주', price:250}
+    ]},
+    { name:'골드(압구정)', type:'print', email:null, presets:[
+      {name:'티셔츠', price:1500},{name:'앞치마', price:800}
+    ]}
+  ];
+  localStorage.setItem('hs_clients', JSON.stringify(defaults));
+  return defaults;
 }
 function saveClients(c){ localStorage.setItem('hs_clients', JSON.stringify(c)); }
-
-async function fetchClientsFromSheet() {
-  try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({ action: 'getClients' })
-    });
-    const result = await res.json();
-    if(result.status === 'ok' && result.clients) {
-      saveClients(result.clients);
-      renderClientSelect();
-      renderClientList();
-      showToast('거래처 목록 불러왔어요 ✓', 'ok');
-    }
-  } catch(err) {
-    console.log('거래처 불러오기 실패:', err);
-  }
-}
 
 function today(){
   const d=new Date();
@@ -390,90 +391,14 @@ async function saveEntry(){
 }
 
 function printPDF(data){
-  const total=data.items.reduce((s,i)=>s+(parseFloat(i.amount)||(parseFloat(i.qty)||0)*(parseFloat(i.price)||0)),0);
-  const dp=data.date?data.date.split('-'):['','',''];
-  const year=dp[0]||'', month=dp[1]||'', day=dp[2]||'';
-  const rows=data.items.map(i=>{
-    const qty=Number(i.qty)||0, price=Number(i.price)||0, amount=Number(i.amount)||(qty*price);
-    return '<tr>'
-      +'<td style="border:0.5px solid #aaa;padding:3px 4px;text-align:center;font-size:10.5px">'+month+'/'+day+'</td>'
-      +'<td style="border:0.5px solid #aaa;padding:3px 4px;width:110px;font-size:10.5px">'+i.name+'</td>'
-      +'<td style="border:0.5px solid #aaa;padding:3px 4px;text-align:right;width:54px;font-size:10.5px">'+qty.toLocaleString()+'</td>'
-      +'<td style="border:0.5px solid #aaa;padding:3px 4px;text-align:right;width:72px;font-size:10.5px">'+price.toLocaleString()+'</td>'
-      +'<td style="border:0.5px solid #aaa;padding:3px 4px;text-align:right;width:86px;font-size:10.5px">'+amount.toLocaleString()+'</td>'
-      +'</tr>';
-  }).join('');
-  let emptyRows='';
-  for(let i=data.items.length;i<8;i++){
-    emptyRows+='<tr><td style="border:0.5px solid #aaa;height:19px"></td><td style="border:0.5px solid #aaa"></td><td style="border:0.5px solid #aaa"></td><td style="border:0.5px solid #aaa"></td><td style="border:0.5px solid #aaa"></td></tr>';
-  }
-  const totalStr=Math.round(total).toLocaleString();
-
-  function makeForm(copyLabel) {
-    return '<div class="form">'
-      +'<div class="copy-tag">'+copyLabel+'</div>'
-      +'<div class="title">거 래 명 세 표</div>'
-      +'<div class="info">'
-        +'<div class="info-left">'
-          +'<div>'+year+'년&nbsp; '+month+'월&nbsp; '+day+'일</div>'
-          +'<div style="margin:3px 0"><span style="font-size:13px;font-weight:bold;border-bottom:1.5px solid #333;padding-bottom:1px">'+data.client+'</span>&nbsp;귀하</div>'
-          +'<div style="font-size:10px;color:#555">아래와 같이 계산합니다.</div>'
-        +'</div>'
-        +'<div class="info-right">'
-          +'<div class="supplier">'
-            +'<div class="sp-label">공급자</div>'
-            +'<div class="sp-rows">'
-              +'<div class="sp-row"><div class="sp-th">등록번호</div><div class="sp-td" style="font-weight:bold;letter-spacing:0.5px">834-53-00976</div></div>'
-              +'<div class="sp-row"><div class="sp-th">상&nbsp;&nbsp;호</div><div class="sp-td-name" style="font-weight:bold">HS클린</div><div class="sp-th2">성명</div><div class="sp-td">곽현민</div></div>'
-              +'<div class="sp-row"><div class="sp-th">사업장<br>주&nbsp;&nbsp;소</div><div class="sp-td" style="font-size:9px">경기도 광주시 대쌍령리 362-5, A동</div></div>'
-              +'<div class="sp-row" style="border-bottom:none"><div class="sp-th">업&nbsp;&nbsp;태</div><div class="sp-td-name">서비스업</div><div class="sp-th2">종목</div><div class="sp-td">세탁업</div></div>'
-            +'</div>'
-          +'</div>'
-        +'</div>'
-      +'</div>'
-      +'<div class="total"><span>합계금액</span><span>( ₩&nbsp;<span style="font-size:20px;font-weight:bold">'+totalStr+'</span>&nbsp;)</span></div>'
-      +'<table>'
-        +'<thead><tr><th style="width:50px">월일</th><th style="width:110px">품&nbsp;&nbsp;목</th><th style="width:54px">수량</th><th style="width:72px">단가</th><th style="width:86px">공급가액</th></tr></thead>'
-        +'<tbody>'+rows+emptyRows+'</tbody>'
-        +'<tfoot><tr class="sum"><td colspan="2" style="text-align:center">합&nbsp;&nbsp;&nbsp;계</td><td></td><td></td><td style="text-align:right">'+totalStr+'원</td></tr></tfoot>'
-      +'</table>'
-    +'</div>';
-  }
-
-  const css=`*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:white;color:#1a1a1a}
-.page{width:210mm;margin:0 auto;background:white;padding:5mm 8mm}
-.form{border:2px solid #444;margin-bottom:3mm}
-.copy-tag{text-align:right;font-size:9px;color:#888;padding:1.5mm 3mm;background:#f7f7f7;border-bottom:0.5px solid #ddd}
-.title{text-align:center;font-size:21px;font-weight:700;letter-spacing:9px;padding:7px;border-bottom:2px solid #444}
-.info{display:table;width:100%;border-bottom:1px solid #444}
-.info-left{display:table-cell;width:42%;padding:7px 10px;vertical-align:top;border-right:1px solid #444;font-size:11px;line-height:2}
-.info-right{display:table-cell;width:58%;vertical-align:top}
-.supplier{display:table;width:100%;height:100%}
-.sp-label{display:table-cell;width:16px;vertical-align:middle;text-align:center;background:#f5f5f5;border-right:1px solid #444;font-size:8px;font-weight:bold;writing-mode:vertical-rl;letter-spacing:3px}
-.sp-rows{display:table-cell;vertical-align:top}
-.sp-row{display:table;width:100%;table-layout:fixed;border-bottom:0.5px solid #ccc;height:24px}
-.sp-row:last-child{border-bottom:none}
-.sp-th{display:table-cell;width:48px;background:#f5f5f5;font-size:9px;font-weight:bold;text-align:center;vertical-align:middle;border-right:0.5px solid #ccc}
-.sp-td{display:table-cell;font-size:10px;vertical-align:middle;padding:0 5px}
-.sp-td-name{display:table-cell;width:80px;font-size:10px;vertical-align:middle;padding:0 5px}
-.sp-th2{display:table-cell;width:36px;background:#f5f5f5;font-size:9px;font-weight:bold;text-align:center;vertical-align:middle;border-left:0.5px solid #ccc;border-right:0.5px solid #ccc}
-.total{display:flex;justify-content:space-between;align-items:center;padding:6px 100px;border-bottom:1px solid #444;font-weight:bold;font-size:16px}
-table{width:100%;border-collapse:collapse;font-size:10.5px}
-th{border:0.5px solid #aaa;padding:4px 2px;text-align:center;background:#f5f5f5;font-size:10px}
-td{border:0.5px solid #aaa;padding:3px 4px;height:19px}
-.sum td{font-weight:bold;font-size:12px;background:#f5f5f5}
-.cut{text-align:center;font-size:10px;color:#aaa;padding:2mm 0;letter-spacing:2px}
-@media print{@page{size:A4 portrait;margin:0}}`;
-
-  const html='<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>거래명세표</title>'
-    +'<style>'+css+'</style></head><body>'
-    +'<div class="page">'
-    +makeForm('공급자 보관용')
-    +'<div class="cut">✂ &nbsp; 여기서 자르세요 &nbsp; ✂</div>'
-    +makeForm('공급받는자 보관용')
-    +'</div></body></html>';
-
+  const total=data.items.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+  const rows=data.items.map(i=>`<tr><td>${i.name}</td><td style="text-align:right">${Number(i.qty).toLocaleString()}</td><td style="text-align:right">₩${Number(i.price||0).toLocaleString()}</td><td style="text-align:right">₩${Number(i.amount||0).toLocaleString()}</td></tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>거래명세서</title>
+  <style>body{font-family:-apple-system,sans-serif;padding:40px;max-width:520px;margin:0 auto;color:#1a1a1a}h1{font-size:22px;font-weight:700;margin-bottom:4px}.sub{font-size:13px;color:#888;margin-bottom:28px}table{width:100%;border-collapse:collapse;font-size:14px}th{background:#f5f5f3;padding:9px 12px;text-align:left;border-bottom:1.5px solid #ddd;font-weight:600}td{padding:9px 12px;border-bottom:0.5px solid #eee}.total td{font-weight:700;border-top:1.5px solid #1a1a1a;border-bottom:none}.footer{margin-top:32px;font-size:12px;color:#aaa}@media print{body{padding:20px}}</style>
+  </head><body><h1>거래 명세서</h1><div class="sub">${data.date} · ${data.client}</div>
+  <table><thead><tr><th>품목</th><th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">공급가액</th></tr></thead>
+  <tbody>${rows}</tbody><tfoot><tr class="total"><td colspan="3">합계</td><td style="text-align:right">₩${Math.round(total).toLocaleString()}</td></tr></tfoot></table>
+  <div class="footer">HS클린 · 경기도 광주시 대쌍령리 362-5, A동</div></body></html>`;
   const w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
   else{showToast('팝업 차단을 해제하고 다시 시도해주세요','err');}
@@ -609,7 +534,6 @@ function confirmEditPresets(){
 document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('date-input').value = today();
   renderClientSelect();
-  fetchClientsFromSheet();
 });
 </script>
 </body>
