@@ -388,6 +388,7 @@
 
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
+        redirect: "follow",
         body: JSON.stringify(payload),
       });
 
