@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>HS클린 사진 전송</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #f2f4f6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: #1a5276;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+
+    #driver-badge {
+      font-size: 13px;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* 기사 선택 화면 */
+    #driver-select-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .driver-select-box {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 280px;
+      text-align: center;
+    }
+
+    .driver-select-box h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1a5276;
+      margin-bottom: 6px;
+    }
+
+    .driver-select-box p {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+
+    .driver-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a5276;
+      background: white;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .driver-btn:hover, .driver-btn:active {
+      border-color: #1a5276;
+      background: #eaf0f8;
+    }
+
+    /* 메인 카드 */
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    /* 사진 촬영 영역 */
+    #preview-area {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border: 2px dashed #d0d0d0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    #preview-area:active { border-color: #1a5276; }
+
+    #preview-area img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      border-radius: 8px;
+    }
+
+    #preview-area .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #aaa;
+    }
+
+    #preview-area .placeholder svg {
+      width: 48px; height: 48px;
+      opacity: 0.5;
+    }
+
+    #preview-area .placeholder span {
+      font-size: 14px;
+    }
+
+    #camera-input {
+      display: none;
+    }
+
+    /* 메모 입력 */
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #333;
+      resize: none;
+      height: 80px;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #1a5276;
+    }
+
+    /* 전송 버튼 */
+    #send-btn {
+      width: 100%;
+      padding: 16px;
+      background: #1a5276;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    #send-btn:active { transform: scale(0.98); }
+    #send-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* 상태 메시지 */
+    #status {
+      text-align: center;
+      font-size: 14px;
+      padding: 10px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    #status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    #status.error   { background: #fdecea; color: #c62828; display: block; }
+    #status.loading { background: #e3f2fd; color: #1565c0; display: block; }
+
+    /* 전송 기록 */
+    #history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-item {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .history-item .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      flex-shrink: 0;
+    }
+
+    .history-empty {
+      text-align: center;
+      color: #bbb;
+      font-size: 13px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 기사 선택 팝업 -->
+<div id="driver-select-screen">
+  <div class="driver-select-box">
+    <h2>HS클린</h2>
+    <p>본인 이름을 선택해주세요</p>
+    <button class="driver-btn" onclick="selectDriver('파요')">파요</button>
+    <button class="driver-btn" onclick="selectDriver('장성용')">장성용</button>
+    <button class="driver-btn" onclick="selectDriver('유지현')">유지현</button>
+  </div>
+</div>
+
+<header>
+  <h1>HS클린 사진 전송</h1>
+  <div id="driver-badge" onclick="changeDriver()">이름 선택 ▾</div>
+</header>
+
+<div class="container">
+
+  <!-- 사진 촬영 -->
+  <div class="card">
+    <div class="card-label">사진 촬영</div>
+    <div id="preview-area" onclick="document.getElementById('camera-input').click()">
+      <img id="preview-img" alt="촬영된 사진" />
+      <div class="placeholder" id="placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span>탭하여 사진 촬영</span>
+      </div>
+    </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handlePhoto(event)" />
+  </div>
+
+  <!-- 메모 -->
+  <div class="card">
+    <div class="card-label">특이사항 (선택)</div>
+    <textarea id="note" placeholder="특이사항이 있으면 입력하세요"></textarea>
+  </div>
+
+  <!-- 상태 -->
+  <div id="status"></div>
+
+  <!-- 전송 버튼 -->
+  <button id="send-btn" onclick="sendPhoto()" disabled>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="22" y1="2" x2="11" y2="13"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+    전송하기
+  </button>
+
+  <!-- 오늘 전송 기록 -->
+  <div class="card">
+    <div class="card-label">오늘 전송 기록</div>
+    <div id="history-list">
+      <div class="history-empty">아직 전송 기록이 없어요</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ★ 여기에 Apps Script 웹 앱 URL을 붙여넣으세요
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-YwwvbquwhppBdU9nC7UfePIE3jllr4FvrlbXzDAWzGSLQpgtALwMNZ9W7WGT6Znb/exec";
+
+  let currentDriver = localStorage.getItem("hs_driver") || "";
+  let currentImageBase64 = null;
+  let currentMimeType = null;
+  const history = JSON.parse(sessionStorage.getItem("hs_history") || "[]");
+
+  // 초기화
+  window.onload = () => {
+    if (currentDriver) {
+      document.getElementById("driver-select-screen").style.display = "none";
+      document.getElementById("driver-badge").textContent = currentDriver + " ▾";
+    }
+    renderHistory();
+  };
+
+  function selectDriver(name) {
+    currentDriver = name;
+    localStorage.setItem("hs_driver", name);
+    document.getElementById("driver-select-screen").style.display = "none";
+    document.getElementById("driver-badge").textContent = name + " ▾";
+  }
+
+  function changeDriver() {
+    document.getElementById("driver-select-screen").style.display = "flex";
+  }
+
+  function handlePhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    currentMimeType = file.type;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target.result;
+      // base64 데이터만 추출
+      currentImageBase64 = result.split(",")[1];
+
+      // 미리보기
+      const img = document.getElementById("preview-img");
+      img.src = result;
+      img.style.display = "block";
+      document.getElementById("placeholder").style.display = "none";
+
+      document.getElementById("send-btn").disabled = false;
+      setStatus("", "");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function sendPhoto() {
+    if (!currentImageBase64) return;
+    if (!currentDriver) {
+      document.getElementById("driver-select-screen").style.display = "flex";
+      return;
+    }
+
+    const note = document.getElementById("note").value.trim();
+    const btn = document.getElementById("send-btn");
+    btn.disabled = true;
+    setStatus("전송 중...", "loading");
+
+    try {
+      const payload = {
+        driverName: currentDriver,
+        note,
+        imageBase64: currentImageBase64,
+        mimeType: currentMimeType,
+        timestamp: new Date().toISOString(),
+      };
+
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setStatus("✅ 전송 완료!", "success");
+        addHistory(currentDriver, note);
+        resetForm();
+      } else {
+        throw new Error(result.error || "전송 실패");
+      }
+    } catch (err) {
+      setStatus("❌ 전송 실패. 다시 시도해주세요.", "error");
+      btn.disabled = false;
+    }
+  }
+
+  function resetForm() {
+    currentImageBase64 = null;
+    currentMimeType = null;
+    document.getElementById("preview-img").style.display = "none";
+    document.getElementById("placeholder").style.display = "flex";
+    document.getElementById("note").value = "";
+    document.getElementById("camera-input").value = "";
+    document.getElementById("send-btn").disabled = true;
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById("status");
+    el.textContent = msg;
+    el.className = type;
+  }
+
+  function addHistory(driver, note) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    const item = { time: timeStr, driver, note };
+    history.unshift(item);
+    sessionStorage.setItem("hs_history", JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById("history-list");
+    if (history.length === 0) {
+      list.innerHTML = '<div class="history-empty">아직 전송 기록이 없어요</div>';
+      return;
+    }
+    list.innerHTML = history.map(h =>
+      `<div class="history-item">
+        <div class="dot"></div>
+        <span>${h.time} · ${h.driver}${h.note ? " · " + h.note : ""}</span>
+      </div>`
+    ).join("");
+  }
+</script>
+
+</body>
+</html>
